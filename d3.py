@@ -509,21 +509,33 @@ _score_ema     = 0.0
 _ALPHA         = 0.35
 _history_lock  = Lock()
 
-# ── Module-level startup (runs for both `python d3.py` AND gunicorn workers) ──
+# ── Lazy init (runs on first request, not at import time) ─────────────────────
+# This lets gunicorn bind the port immediately so Render doesn't time out.
+_init_lock = Lock()
+_initialized = False
+
+def _lazy_init():
+    global rf_model, _initialized
+    if _initialized:
+        return
+    with _init_lock:
+        if _initialized:   # double-checked locking
+            return
+        print("[d3] Lazy init: loading YOLOv8 ...")
+        load_yolo()
+        print("[d3] Lazy init: loading RF classifier ...")
+        rf_model = load_or_train_model()
+        print(f"[d3] Lazy init complete. YOLO: {'ENABLED' if yolo_model else 'DISABLED'}")
+        _initialized = True
+
+# DB init is fast — safe to do at module level
 print("[d3] Initialising database ...")
 init_db()
-print("[d3] Loading YOLOv8 pose model ...")
-load_yolo()
-print("[d3] Loading / training RF classifier ...")
-rf_model = load_or_train_model()
-print(f"[d3] YOLO: {'ENABLED' if yolo_model else 'DISABLED'}")
 
 
 @app.before_request
 def _ensure_model():
-    global rf_model
-    if rf_model is None:
-        rf_model = load_or_train_model()
+    _lazy_init()
 
 
 # ── Health ──────────────────────────────────────────────────────────────────
