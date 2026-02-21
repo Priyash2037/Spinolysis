@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+.venv/
+
+# Database (ephemeral on Render anyway)
+physio.db
+
+# Keep these IN git — Render needs them for inference:
+# yolov8n-pose.onnx  ← DO commit
+# model_yolo.pkl     ← DO commit
+
+# Large PT weights — not needed on Render (only .onnx is used)
+yolov8n-pose.pt
+
+# Node / frontend
+UI1/node_modules/
+UI1/dist/
+UI1/.env*

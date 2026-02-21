@@ -1,0 +1,9 @@
+flask>=3.0
+flask-cors>=4.0
+numpy>=1.26
+pillow>=10.0
+scikit-learn>=1.4
+joblib>=1.3
+onnxruntime>=1.18          # CPU inference on Render Linux (no DirectML on Linux)
+ultralytics>=8.0
+gunicorn>=22.0
