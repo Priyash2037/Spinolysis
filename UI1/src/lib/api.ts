@@ -1,7 +1,9 @@
 // src/lib/api.ts
 // Typed client for the Flask backend (d3.py) on port 5001
 
-const BASE_URL = "https://spinolysis.onrender.com";
+// Empty string = same origin (Flask serves both frontend and API on Render)
+// For local dev, change to "http://localhost:5001"
+const BASE_URL = import.meta.env.DEV ? "http://localhost:5001" : "";
 
 async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
