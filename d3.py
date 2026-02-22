@@ -36,14 +36,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-# ── Optional: YOLOv8 ─────────────────────────────────────────────────────────
-try:
-    from ultralytics import YOLO
-    from PIL import Image
-    YOLO_AVAILABLE = True
-except ImportError:
-    YOLO_AVAILABLE = False
-    print("[d3] WARNING: ultralytics/pillow not installed. Run: pip install ultralytics pillow")
+# ultralytics imported lazily inside load_yolo() to keep module boot fast
+YOLO_AVAILABLE = True   # assumed; set to False inside load_yolo if import fails
 
 # =============================================================================
 #  Constants
@@ -97,20 +91,27 @@ _YOLO_ONNX    = os.path.join(BASE_DIR, "yolov8n-pose.onnx")
 _USING_GPU    = False
 
 def load_yolo():
-    """Load YOLOv8 pose ONNX model; prefer DirectML GPU, fall back to CPU."""
-    global onnx_session, yolo_model, _USING_GPU
-    if not YOLO_AVAILABLE:
+    """Load YOLOv8 pose ONNX model; use DirectML on Windows, CPU on Linux/Render."""
+    global onnx_session, yolo_model, _USING_GPU, YOLO_AVAILABLE
+    try:
+        from PIL import Image   # lazy import — keeps module boot fast
+    except ImportError:
+        print("[d3] WARNING: pillow not installed. Run: pip install pillow")
+        YOLO_AVAILABLE = False
         return None
     if not os.path.exists(_YOLO_ONNX):
         print(f"[d3] WARNING: {_YOLO_ONNX} not found - YOLO disabled")
         return None
     try:
         import onnxruntime as ort
+        import platform
 
         available = ort.get_available_providers()
         print(f"[d3] ORT providers available: {available}")
 
-        if "DmlExecutionProvider" in available:
+        # DirectML only works on Windows — skip GPU probe on Linux (Render) to avoid
+        # slow /sys/class/drm scan that blocks workers for 30+ seconds
+        if platform.system() == "Windows" and "DmlExecutionProvider" in available:
             providers = ["DmlExecutionProvider", "CPUExecutionProvider"]
             _USING_GPU = True
             device_label = "RTX 3050 via DirectML"
